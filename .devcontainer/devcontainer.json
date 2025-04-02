@@ -1,8 +1,8 @@
 {
-    "name": "My Python GPU Dev Container",
+    "name": "Python GPU Dev Container",
     // Reference your Dockerfile
     "build": {
-      "dockerfile": "Dockerfile", // Or adjust path as needed
+      "dockerfile": "dockerfile", // Or adjust path as needed
       "context": ".." // Or adjust build context path
     },
   
