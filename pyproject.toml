@@ -28,10 +28,10 @@ seaborn = "^0.13"
 ruff = "^0.11"
 dash = "^3.0.1"
 icomo = { version = "*", extras = ["opt"] }
-joblib = "*"
+joblib = "^1.4"
 scikit-learn = "^1.6"
-numba = "*"
-tqdm = "*"
+numba = "^0.61"
+tqdm = "^4.67"
 
 
 [build-system]
