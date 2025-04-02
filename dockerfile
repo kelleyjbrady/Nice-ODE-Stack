@@ -3,12 +3,12 @@ FROM nvidia/cuda:12.4.1-base-ubuntu22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHON_VERSION=3.10 \
+    PYTHON_VERSION=3.13 \
     # Set user/group IDs
     USER_UID=1000 \
     USER_GID=1000 \
     # Poetry config
-    POETRY_VERSION=1.8.2 \
+    POETRY_VERSION=2.1 \
     # Disable virtualenv creation in project directory, store centrally
     POETRY_VIRTUALENVS_IN_PROJECT=false \
     POETRY_VIRTUALENVS_PATH=/opt/poetry-venvs \
