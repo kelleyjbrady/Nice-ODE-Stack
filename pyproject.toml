@@ -26,8 +26,12 @@ ipykernel = "^6.29"
 matplotlib = "^3.10"
 seaborn = "^0.13"
 ruff = "^0.11"
+dash = "^3.0.1"
 icomo = { version = "*", extras = ["opt"] }
-
+joblib = "*"
+scikit-learn = "^1.6"
+numba = "*"
+tqdm = "*"
 
 
 [build-system]
