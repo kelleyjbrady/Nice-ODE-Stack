@@ -6,7 +6,7 @@ authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.13" # Match PYTHON_VERSION in Dockerfile
+python = ">=3.13,<3.14" # Match PYTHON_VERSION in Dockerfile
 # Specify JAX with CUDA 12 extra
 # Check PyPI for the latest compatible JAX version
 jax = { version = "^0.4.28", extras = ["cuda12"] }

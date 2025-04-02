@@ -3,12 +3,12 @@ FROM nvidia/cuda:12.4.1-base-ubuntu22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHON_VERSION=3.13 \
+    #PYTHON_VERSION=3.13.2 \
     # Set user/group IDs
     USER_UID=1000 \
     USER_GID=1000 \
     # Poetry config
-    POETRY_VERSION=2.1 \
+    #POETRY_VERSION=2.1 \
     # Disable virtualenv creation in project directory, store centrally
     POETRY_VIRTUALENVS_IN_PROJECT=false \
     POETRY_VIRTUALENVS_PATH=/opt/poetry-venvs \
@@ -21,8 +21,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Removed python3-venv as Poetry handles environments
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        python${PYTHON_VERSION} \
-        python3-pip \
+        #python${PYTHON_VERSION} \
+        #python3-pip \
         # python${PYTHON_VERSION}-venv # Removed
         git \
         wget \
@@ -34,9 +34,33 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install prerequisites for adding PPAs if necessary (curl/wget already there)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends software-properties-common && \
+    # Add the deadsnakes PPA
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update
+
+# Example: Install Python 3.13 (adjust version as needed/available)
+RUN apt-get install -y --no-install-recommends \
+        python3.13 \
+        python3.13-venv && \
+        #python3.13-setuptools \
+        #python3.13-pip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Update alternatives to make python3 point to python3.13 (optional)
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.13 2 && \
+    update-alternatives --set python3 /usr/bin/python3.13
+
+# Ensure pip is correctly linked or use python3.13 -m pip
+RUN python3 -m ensurepip --upgrade
+
 # Upgrade pip & install Poetry
-RUN pip install --no-cache-dir --upgrade pip && \
-    curl -sSL https://install.python-poetry.org | python${PYTHON_VERSION} - --version ${POETRY_VERSION}
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    curl -sSL https://install.python-poetry.org | python3 -
 
 # --- Application Setup (as root for installation) ---
 # Set a work directory for the application build steps
