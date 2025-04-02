@@ -1,12 +1,12 @@
 # docker-compose.yml
-version: '3.8'
+#version: '3.8'
 
 services:
   # Service name can be anything, e.g., 'dev-env' or 'app'
   dev_env:
     build:
       # Path to the directory containing the Dockerfile
-      context: ./.devcontainer
+      context: .
       # Explicitly name the Dockerfile if not 'Dockerfile'
       dockerfile: dockerfile
       # Pass build arguments if your Dockerfile uses them
