@@ -56,21 +56,13 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
     update-alternatives --set python3 /usr/bin/python3.13
 
 # Ensure pip is correctly linked or use python3.13 -m pip
-RUN python3 -m ensurepip --upgrade
+RUN python3 -m ensurepip --upgrade && \
+ pip3 install --no-cache-dir --upgrade pip && \
+ pip3 install --no-cache-dir poetry ruff
 
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends pipx && \
-    pipx ensurepath 
-    # && \
-    #sudo pipx ensurepath --global # optional to allow pipx actions with --global argument
-
-RUN pipx install poetry 
-RUN poetry completions bash >> ~/.bash_completion
-RUN pipx install ruff
-
-# Upgrade pip & install Poetry
-RUN pip3 install --no-cache-dir --upgrade pip
+ # Optional: Add completions globally
+RUN mkdir -p /etc/bash_completion.d && \
+poetry completions bash > /etc/bash_completion.d/poetry.bash
 
 
 # --- Application Setup (as root for installation) ---
@@ -119,7 +111,7 @@ ENV HOME=/home/$USERNAME \
     PATH="$HOME/.local/bin:$PATH"
 
 # Set the final working directory for the user
-WORKDIR $HOME/workspace
+WORKDIR /app
 # If your code stays in /app and you mount your local code there, use:
 # WORKDIR /app
 
