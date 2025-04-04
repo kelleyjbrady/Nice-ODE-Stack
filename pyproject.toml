@@ -2,8 +2,9 @@
 name = "docker-cuda-env"
 version = "0.1.0"
 description = "JAX project with CUDA support managed by Poetry"
-authors = ["Your Name <you@example.com>"]
+authors = ["Kelley Brady <kelleyjbrady@protonmail.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.13,<3.14" # Match PYTHON_VERSION in Dockerfile
@@ -25,7 +26,7 @@ pymc = "^5.21"
 ipykernel = "^6.29"
 matplotlib = "^3.10"
 seaborn = "^0.13"
-ruff = "^0.11"
+#ruff = "^0.11"
 dash = "^3.0.1"
 icomo = { version = "*", extras = ["opt"] }
 joblib = "^1.4"

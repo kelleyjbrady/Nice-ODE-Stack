@@ -58,9 +58,20 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 # Ensure pip is correctly linked or use python3.13 -m pip
 RUN python3 -m ensurepip --upgrade
 
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends pipx && \
+    pipx ensurepath 
+    # && \
+    #sudo pipx ensurepath --global # optional to allow pipx actions with --global argument
+
+RUN pipx install poetry 
+RUN poetry completions bash >> ~/.bash_completion
+RUN pipx install ruff
+
 # Upgrade pip & install Poetry
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    curl -sSL https://install.python-poetry.org | python3 -
+RUN pip3 install --no-cache-dir --upgrade pip
+
 
 # --- Application Setup (as root for installation) ---
 # Set a work directory for the application build steps
