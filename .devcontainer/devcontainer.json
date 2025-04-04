@@ -34,7 +34,12 @@
           "njpwerner.autodocstring"
 
           // Add other extensions
-        ]
+        ],
+          "settings": {
+            // Settings to help VS Code find the interpreter correctly
+            "python.defaultInterpreterPath": "", // OPTIONAL: You could try to find this path, but often auto-detect works
+            "python.terminal.activateEnvironment": false // Good practice with Poetry
+                }
       }
     },
   

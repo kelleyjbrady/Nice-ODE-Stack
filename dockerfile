@@ -43,7 +43,9 @@ RUN apt-get update && \
 
 # Example: Install Python 3.13 (adjust version as needed/available)
 RUN apt-get install -y --no-install-recommends \
+        g++ \
         python3.13 \
+        python3.13-dev \
         python3.13-venv && \
         #python3.13-setuptools \
         #python3.13-pip && \
@@ -67,7 +69,7 @@ poetry completions bash > /etc/bash_completion.d/poetry.bash
 
 # --- Application Setup (as root for installation) ---
 # Set a work directory for the application build steps
-WORKDIR /app
+WORKDIR /workspaces/poetry-env
 
 # Copy only dependency definition files first to leverage Docker cache
 COPY pyproject.toml poetry.lock* ./
@@ -77,7 +79,7 @@ COPY pyproject.toml poetry.lock* ./
 # --no-ansi: Produce plain output
 # --no-root: Skip installing the project package itself (if it's an app, not a library)
 # This command creates the virtualenv based on POETRY_VIRTUALENVS_PATH
-RUN poetry install --no-interaction --no-ansi --no-root
+RUN poetry install --no-interaction --no-ansi --no-root --no-cache
 
 # Copy the rest of the application source code
 COPY . .
@@ -111,7 +113,7 @@ ENV HOME=/home/$USERNAME \
     PATH="$HOME/.local/bin:$PATH"
 
 # Set the final working directory for the user
-WORKDIR /app
+#WORKDIR /app
 # If your code stays in /app and you mount your local code there, use:
 # WORKDIR /app
 
