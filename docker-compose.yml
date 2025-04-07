@@ -14,6 +14,7 @@ services:
       #  PYTHON_VERSION: 3.13
     # *** This is the key part ***
     # Assign a specific name and tag to the image built by this service
-    image: cuda-py:latest
+
+    image: cuda-py:${BUILD_TAG:-latest}
     # Note: Other compose directives like 'ports', 'volumes', 'command'
     # are usually not needed if you ONLY use this compose file for building.

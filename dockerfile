@@ -24,6 +24,8 @@ RUN apt-get update && \
         #python${PYTHON_VERSION} \
         #python3-pip \
         # python${PYTHON_VERSION}-venv # Removed
+        g++ \
+        graphviz \
         git \
         wget \
         curl \
@@ -42,8 +44,7 @@ RUN apt-get update && \
     apt-get update
 
 # Example: Install Python 3.13 (adjust version as needed/available)
-RUN apt-get install -y --no-install-recommends \
-        g++ \
+RUN apt-get install -y --no-install-recommends \   
         python3.13 \
         python3.13-dev \
         python3.13-venv && \
