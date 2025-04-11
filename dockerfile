@@ -81,9 +81,10 @@ RUN cd /tmp && \
     # Verify installation
     julia --version
 
+
 #R package installation
-COPY R_requirements.txt install_R_packages.R /tmp/
-RUN cd /tmp && Rscript install_R_packages.R && rm /tmp/R_requirements.txt /tmp/install_R_packages.R
+COPY r_requirements.txt install_R_pkgs.R /tmp/
+RUN cd /tmp && Rscript install_R_pkgs.R && rm /tmp/r_requirements.txt /tmp/install_R_pkgs.R
 
 
 # --- Application Setup (as root for installation) ---

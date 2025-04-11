@@ -3,6 +3,9 @@ languageserver
 lintr
 
 # Optional but recommended:
-jsonlite # Often needed by language server or other tools
-styler   # For code formatting
-httpgd   # For alternative plot viewing in VS Code
+# Often needed by language server or other tools
+#jsonlite 
+# For code formatting
+styler
+# For alternative plot viewing in VS Code   
+#httpgd   

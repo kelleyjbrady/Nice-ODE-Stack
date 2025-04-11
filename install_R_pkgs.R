@@ -4,9 +4,9 @@
 # Ensure a non-interactive CRAN mirror is set
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 
-req_file <- "R_requirements.txt"
+req_file <- "r_requirements.txt"
 if (!file.exists(req_file)) {
-  stop("Cannot find R_requirements.txt in the current directory.")
+  stop("Cannot find r_requirements.txt in the current directory.")
 }
 
 print(paste("Reading packages from:", req_file))
@@ -15,7 +15,7 @@ packages <- packages[packages != ""] # Remove empty lines
 packages <- packages[!startsWith(packages, "#")] # Remove comments/empty lines
 
 if (length(packages) == 0) {
-  print("No packages listed in R_requirements.txt.")
+  print("No packages listed in r_requirements.txt.")
   quit(save = "no", status = 0)
 }
 
