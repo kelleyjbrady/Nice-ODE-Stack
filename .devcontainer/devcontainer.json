@@ -31,7 +31,11 @@
           "KevinRose.vsc-python-indent", 
           "ggoogle.geminicodeassist", 
           "tamasfe.even-better-toml", 
-          "njpwerner.autodocstring"
+          "njpwerner.autodocstring", 
+          "REditorSupport.r", 
+          "RDebugger.r-debugger", 
+          "julialang.language-julia",
+          "0h7z.vscode-julia-format"
 
           // Add other extensions
         ],

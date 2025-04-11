@@ -1,0 +1,8 @@
+# R packages for VS Code integration and development
+languageserver
+lintr
+
+# Optional but recommended:
+jsonlite # Often needed by language server or other tools
+styler   # For code formatting
+httpgd   # For alternative plot viewing in VS Code

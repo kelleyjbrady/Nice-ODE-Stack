@@ -25,6 +25,16 @@ RUN apt-get update && \
         vim \
         nano \
         build-essential \
+        software-properties-common \
+        # R base, development tools, and common R package dependencies
+        r-base \
+        r-base-dev \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libcairo2-dev \
+        libxt-dev \
     # Clean up apt caches
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -52,11 +62,28 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 # Ensure pip is correctly linked, install 'tools' into the system python
 RUN python3 -m ensurepip --upgrade && \
  pip3 install --no-cache-dir --upgrade pip && \
- pip3 install --no-cache-dir poetry ruff
+ pip3 install --no-cache-dir poetry ruff radian
 
  # Optional: Add completions globally
 RUN mkdir -p /etc/bash_completion.d && \
 poetry completions bash > /etc/bash_completion.d/poetry.bash
+
+
+# --- Julia Setup ---
+# Download and install Julia from official binaries
+RUN cd /tmp && \
+    wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.11/julia-1.11.4-linux-x86_64.tar.gz && \
+    # Optional: Add SHA256 verification here if needed
+    # echo "<EXPECTED_SHA256_HASH> *julia-${JULIA_VERSION}-linux-x86_64.tar.gz" | sha256sum -c - && \
+    tar -xzf julia-1.11.4-linux-x86_64.tar.gz -C /opt/ && \
+    ln -s /opt/julia-1.11.4/bin/julia /usr/local/bin/julia && \
+    rm julia-1.11.4-linux-x86_64.tar.gz && \
+    # Verify installation
+    julia --version
+
+#R package installation
+COPY R_requirements.txt install_R_packages.R /tmp/
+RUN cd /tmp && Rscript install_R_packages.R && rm /tmp/R_requirements.txt /tmp/install_R_packages.R
 
 
 # --- Application Setup (as root for installation) ---
@@ -85,7 +112,7 @@ RUN groupadd --gid $USER_GID $USERNAME && \
 
 # Grant ownership of the app directory and the venvs to the user
 # This allows the user to manage files and potentially install packages later if needed
-RUN chown -R $USERNAME:$USER_GID /app ${POETRY_VIRTUALENVS_PATH}
+RUN chown -R $USERNAME:$USER_GID /workspaces/poetry-env ${POETRY_VIRTUALENVS_PATH}
 
 
 # Switch context to the non-root user
@@ -96,7 +123,10 @@ USER $USERNAME
 # or we can explicitly add the expected user location if needed.
 # The venv path is NOT added here; use 'poetry run' or 'poetry shell'.
 ENV HOME=/home/$USERNAME \
-    PATH="$HOME/.local/bin:$PATH"
+    PATH="$HOME/.local/bin:$PATH" \
+    R_LIBS_USER=$HOME/R/library
+
+WORKDIR /workspaces/poetry-env
 
 # --- Development Environment Ready ---
 # Keep container running for VS Code to attach
