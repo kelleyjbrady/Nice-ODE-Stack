@@ -94,6 +94,16 @@ WORKDIR /workspaces/poetry-env
 # Copy only dependency definition files first to leverage Docker cache
 COPY pyproject.toml poetry.lock* ./
 
+ARG USERNAME=vscode
+# Create the user group and user; -m creates the home directory
+# Do this *before* creating user-owned directories
+RUN groupadd --gid $USER_GID $USERNAME && \
+    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME #&& \
+    # Create the poetry venv path directory and set ownership *before* poetry install
+    mkdir -p ${POETRY_VIRTUALENVS_PATH} && \
+    chown $USERNAME:$USER_GID ${POETRY_VIRTUALENVS_PATH}    
+
+
 # Install project dependencies using Poetry
 # --no-interaction: Do not ask interactive questions
 # --no-ansi: Produce plain output
@@ -104,17 +114,9 @@ RUN poetry install --no-interaction --no-ansi --no-root --no-cache
 # Copy the rest of the application source code
 COPY . .
 
-# --- User Setup ---
-ARG USERNAME=vscode
-# Create the user group and user; -m creates the home directory
-# Also add user to video group for potential GPU access outside CUDA-specific tasks (optional)
-RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME #&& \
-
-# Grant ownership of the app directory and the venvs to the user
-# This allows the user to manage files and potentially install packages later if needed
+#Grant ownership of the app directory AND the *contents* of the venvs to the user
+# The parent /opt/poetry-venvs is already owned by the user from the earlier step
 RUN chown -R $USERNAME:$USER_GID /workspaces/poetry-env ${POETRY_VIRTUALENVS_PATH}
-
 
 # Switch context to the non-root user
 USER $USERNAME
