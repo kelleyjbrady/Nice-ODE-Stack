@@ -98,10 +98,18 @@ ARG USERNAME=vscode
 # Create the user group and user; -m creates the home directory
 # Do this *before* creating user-owned directories
 RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME #&& \
-    # Create the poetry venv path directory and set ownership *before* poetry install
-    RUN mkdir -p ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R/library && \
-    chown ${USERNAME}:${USER_GID} ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R /home/${USERNAME}/R/library  
+    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+
+
+# Create necessary directories needed by the user and set ownership *before* switching user
+RUN mkdir -p ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R/library && \
+    chown ${USERNAME}:${USER_GID} ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R /home/${USERNAME}/R/library
+
+# --- Copy user .Rprofile to ensure user library path is prioritized ---
+# Copy the pre-made .Rprofile into the user's home directory
+COPY .Rprofile /home/${USERNAME}/.Rprofile
+# Ensure the .Rprofile is owned by the user
+RUN chown ${USERNAME}:${USER_GID} /home/${USERNAME}/.Rprofile
 
 
 # Install project dependencies using Poetry
