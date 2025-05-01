@@ -100,8 +100,8 @@ ARG USERNAME=vscode
 RUN groupadd --gid $USER_GID $USERNAME && \
     useradd --uid $USER_UID --gid $USER_GID -m $USERNAME #&& \
     # Create the poetry venv path directory and set ownership *before* poetry install
-    mkdir -p ${POETRY_VIRTUALENVS_PATH} && \
-    chown $USERNAME:$USER_GID ${POETRY_VIRTUALENVS_PATH}    
+    RUN mkdir -p ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R/library && \
+    chown ${USERNAME}:${USER_GID} ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R /home/${USERNAME}/R/library  
 
 
 # Install project dependencies using Poetry
