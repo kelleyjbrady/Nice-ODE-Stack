@@ -2,7 +2,12 @@ FROM nvidia/cuda:12.4.1-base-ubuntu22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
-   
+    # --- Locale Settings ---
+    # Set the language and locale to en_US.UTF-8 system-wide
+    # This prevents locale warnings in R, Python, and other tools.
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
     # Set user/group IDs
     USER_UID=1000 \
     USER_GID=1000 \
@@ -17,14 +22,18 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install system dependencies: Python, pip, git, common utilities, and build tools
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        # Locales package needed for locale generation
+        locales \
+        # Compilers and build tools
         g++ \
+        build-essential \
+        # Common utilities
         graphviz \
         git \
         wget \
         curl \
         vim \
         nano \
-        build-essential \
         software-properties-common \
         # R base, development tools, and common R package dependencies
         r-base \
@@ -38,6 +47,11 @@ RUN apt-get update && \
     # Clean up apt caches
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# --- Generate Locale ---
+# Uncomment the desired locale in the config file and run locale-gen
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
+locale-gen
 
 # Install prerequisites for adding PPAs if necessary (curl/wget already there)
 RUN apt-get update && \
@@ -133,7 +147,8 @@ USER $USERNAME
 # Note: The poetry executable itself should now be accessible via the inherited PATH
 # or we can explicitly add the expected user location if needed.
 # The venv path is NOT added here; use 'poetry run' or 'poetry shell'.
-ENV HOME=/home/$USERNAME \
+ARG HOME=/home/$USERNAME
+ENV HOME=$HOME \
     PATH="$HOME/.local/bin:$PATH" \
     R_LIBS_USER=$HOME/R/library
 
