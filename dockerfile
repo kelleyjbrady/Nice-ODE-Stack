@@ -49,10 +49,10 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Generate Locale ---
-# Uncomment the desired locale in the config file and run locale-gen
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
 locale-gen
 
+# --- Python Setup ---
 # Install prerequisites for adding PPAs if necessary (curl/wget already there)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common && \
@@ -76,8 +76,7 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 # Ensure pip is correctly linked, install 'tools' into the system python
 RUN python3 -m ensurepip --upgrade && \
  pip3 install --no-cache-dir --upgrade pip && \
- pip3 install --no-cache-dir poetry ruff radian
-
+ pip3 install --no-cache-dir poetry
  # Optional: Add completions globally
 RUN mkdir -p /etc/bash_completion.d && \
 poetry completions bash > /etc/bash_completion.d/poetry.bash
@@ -103,11 +102,13 @@ RUN cd /tmp && Rscript install_R_pkgs.R && rm /tmp/r_requirements.txt /tmp/insta
 
 # --- Application Setup (as root for installation) ---
 # Set a work directory for the application build steps
-WORKDIR /workspaces/poetry-env
+ARG DEV_TOOLS_PROJ_PATH=/workspaces/cuda-py-dev-tools
+WORKDIR $DEV_TOOLS_PROJ_PATH
 
 # Copy only dependency definition files first to leverage Docker cache
 COPY pyproject.toml poetry.lock* ./
 
+# ---- User setup ----
 ARG USERNAME=vscode
 # Create the user group and user; -m creates the home directory
 # Do this *before* creating user-owned directories
@@ -126,19 +127,31 @@ COPY .Rprofile /home/${USERNAME}/.Rprofile
 RUN chown ${USERNAME}:${USER_GID} /home/${USERNAME}/.Rprofile
 
 
-# Install project dependencies using Poetry
+# Install dev tools dependencies using Poetry
 # --no-interaction: Do not ask interactive questions
 # --no-ansi: Produce plain output
 # --no-root: Skip installing the project package itself (if it's an app, not a library)
 # This command creates the virtualenv based on POETRY_VIRTUALENVS_PATH
 RUN poetry install --no-interaction --no-ansi --no-root --no-cache
 
+# --- Make tools from the dev tools venv easily accessible ---
+# Get the full path to the virtual environment created by the 'poetry install' above
+RUN DEV_TOOLS_VENV_PATH=$(poetry env info --path) && \
+    echo "Dev tools venv path: ${DEV_TOOLS_VENV_PATH}" && \
+    # Add this venv's bin directory to the PATH for all users/shells
+    # This makes tools like ruff, radian, jupyter callable directly
+    echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" >> /etc/bash.bashrc && \
+    echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" > /etc/profile.d/dev_tools_poetry_env.sh && \
+    chmod +x /etc/profile.d/dev_tools_poetry_env.sh
+
+RUN rm -rf /build_env_tools # Clean up build context directory
+
 # Copy the rest of the application source code
 COPY . .
 
 #Grant ownership of the app directory AND the *contents* of the venvs to the user
 # The parent /opt/poetry-venvs is already owned by the user from the earlier step
-RUN chown -R $USERNAME:$USER_GID /workspaces/poetry-env ${POETRY_VIRTUALENVS_PATH}
+RUN chown -R $USERNAME:$USER_GID ${DEV_TOOLS_PROJ_PATH} ${POETRY_VIRTUALENVS_PATH}
 
 # Switch context to the non-root user
 USER $USERNAME
@@ -152,8 +165,8 @@ ENV HOME=$HOME \
     PATH="$HOME/.local/bin:$PATH" \
     R_LIBS_USER=$HOME/R/library
 
-WORKDIR /workspaces/poetry-env
+WORKDIR /home/${USERNAME}
 
 # --- Development Environment Ready ---
 # Keep container running for VS Code to attach
-CMD ["sleep", "infinity"]
+#CMD ["sleep", "infinity"]

@@ -1,0 +1,6 @@
+# proj-cuda-container/mlflow_image_builder/Dockerfile
+# Use a specific version of the official MLflow image
+FROM ghcr.io/mlflow/mlflow:v2.22.0 
+
+# Install the PostgreSQL Python driver
+RUN pip install --no-cache-dir psycopg2-binary

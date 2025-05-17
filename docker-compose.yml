@@ -2,19 +2,10 @@
 #version: '3.8'
 
 services:
-  # Service name can be anything, e.g., 'dev-env' or 'app'
-  dev_env:
+  dev_env_builder:
     build:
       # Path to the directory containing the Dockerfile
       context: .
       # Explicitly name the Dockerfile if not 'Dockerfile'
       dockerfile: dockerfile
-      # Pass build arguments if your Dockerfile uses them
-      #args:
-      #  PYTHON_VERSION: 3.13
-    # *** This is the key part ***
-    # Assign a specific name and tag to the image built by this service
-
     image: cuda-py:${BUILD_TAG:-latest}
-    # Note: Other compose directives like 'ports', 'volumes', 'command'
-    # are usually not needed if you ONLY use this compose file for building.
