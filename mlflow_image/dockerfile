@@ -2,5 +2,22 @@
 # Use a specific version of the official MLflow image
 FROM ghcr.io/mlflow/mlflow:v2.22.0 
 
-# Install the PostgreSQL Python driver
-RUN pip install --no-cache-dir psycopg2-binary
+# Install PostgreSQL Python driver AND gosu for privilege dropping
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir psycopg2-binary
+
+# Copy the entrypoint script and make it executable
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set environment variables for the entrypoint script (can be overridden in docker-compose)
+# These should match the user that the base ghcr.io/mlflow/mlflow image might already use,
+# or a new user you want to define. Let's assume we define/ensure user 'mlflow' UID/GID 1000.
+ENV MLFLOW_USER_NAME=mlflow
+ENV MLFLOW_UID=1000
+ENV MLFLOW_GID=1000
+
+# Run the entrypoint script.
+# The CMD (like "mlflow server --host 0.0.0.0 ...") will be passed as arguments ("$@") to this script.
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
