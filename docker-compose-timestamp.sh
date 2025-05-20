@@ -52,10 +52,10 @@ fi
 # --- MLflow Extended Image Build Process ---
 echo ""
 echo "Starting MLFLOW EXTENDED IMAGE build process..."
-FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY="${REGISTRY_PATH}/${MLFLOW_IMAGE_BASE_NAME}:${MLFLOW_VERSION_TAG}"
+FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY="${REGISTRY_PATH}/${MLFLOW_IMAGE_BASE_NAME}:${DEV_BUILD_TAG}"
 
 echo "Building MLFLOW EXTENDED image: ${FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY}"
-docker build -t "${FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY}" ./mlflow_image/
+docker build --no-cache -t "${FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY}" ./mlflow_image/
 
 # --- Push to Registry ----
 if [ "$PUSH_TO_REG" -eq 1 ]
