@@ -22,11 +22,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Install system dependencies: Python, pip, git, common utilities, and build tools
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        # Locales package needed for locale generation
+        # Prerequisites for adding repositories
+        software-properties-common \
+        dirmngr \
+        # Locales package
         locales \
         # Compilers and build tools
         g++ \
         build-essential \
+        cmake \
         # Common utilities
         graphviz \
         git \
@@ -34,19 +38,28 @@ RUN apt-get update && \
         curl \
         vim \
         nano \
-        software-properties-common \
-        # R base, development tools, and common R package dependencies
+    # Add the CRAN GPG key and repository for Ubuntu 22.04 (Jammy)
+    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
+    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/' && \
+    # Update apt lists again and install R and its dependencies
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
         r-base \
         r-base-dev \
         libcurl4-openssl-dev \
         libssl-dev \
         libxml2-dev \
         libfontconfig1-dev \
+        libharfbuzz-dev \
+         libfribidi-dev \
         libcairo2-dev \
         libxt-dev \
-    # Clean up apt caches
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        # Added for symengine and other scientific packages
+        libgmp-dev \
+        libmpfr-dev \
+    # Clean up apt caches to reduce image size
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # --- Generate Locale ---
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
