@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import  AutoProcessor, AutoModelForImageTextToText, BitsAndBytesConfig
 import os
 from pathlib import Path
 
@@ -32,18 +32,25 @@ async def load_model():
         if not auth_token:
             print("Warning: HF_TOKEN environment variable not set. Download may fail for gated models.")
 
-        tokenizer = AutoTokenizer.from_pretrained(
+        # Define the 4-bit quantization configuration
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16
+        )
+        
+        tokenizer = AutoProcessor.from_pretrained(
             model_name,
             cache_dir=CACHE_DIR,
             token=auth_token
         )
         
-        model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModelForImageTextToText.from_pretrained(
             model_name,
-            torch_dtype=torch.bfloat16,
+            quantization_config=quantization_config,
             cache_dir=CACHE_DIR,
             token=auth_token
-        ).to("cuda")
+        )
 
         print(f"'{model_name}' loaded successfully onto CUDA device.")
 

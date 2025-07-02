@@ -7,4 +7,4 @@ chown -R gemma:gemma /cache
 
 # Execute the command passed to this script (the CMD from the Dockerfile)
 # as the 'gemma' user.
-exec "$@"
+exec gosu gemma "$@"
