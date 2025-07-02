@@ -4,6 +4,7 @@ set -e
 # --- Configuration ---
 DEV_IMAGE_BASE_NAME="cuda-py"
 MLFLOW_IMAGE_BASE_NAME="mlflow-postgres"
+GEMMA_IMAGE_BASE_NAME="gemma-llm"
 # Your container registry (e.g., your Docker Hub username, ghcr.io/yourgithubusername)
 REGISTRY_PATH="kelleyjbrady" # <<< REPLACE THIS (e.g., ghcr.io/yourusername)
 # Path to the PK-Analysis repo's .env file (ADJUST IF YOUR REPOS ARE NOT SIBLINGS)
@@ -73,6 +74,30 @@ else
     echo "--------------------------------------------------"
 fi
 
+# --- Gemma LLM Image Build Process ---
+echo ""
+echo "Starting GEMMA LLM IMAGE build process..."
+FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY="${REGISTRY_PATH}/${GEMMA_IMAGE_BASE_NAME}:${DEV_BUILD_TAG}"
+
+echo "Building GEMMA LLM image: ${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}"
+docker build --no-cache -t "${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}" ./gemma_llm/
+
+# --- Push Gemma LLM Image to Registry ---
+if [ "$PUSH_TO_REG" -eq 1 ]; then
+    echo "Pushing GEMMA LLM image: ${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}"
+    docker push "${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}"
+    echo "--------------------------------------------------"
+    echo " GEMMA LLM IMAGE Build Complete!"
+    echo " Pushed: ${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}"
+    echo "--------------------------------------------------"
+else
+    echo "Image push skipped because PUSH_TO_REG==0"
+    echo "--------------------------------------------------"
+    echo " GEMMA LLM IMAGE Build Complete!"
+    echo "--------------------------------------------------"
+fi
+
+
 # --- Update .env file in PK-Analysis repo ---
 if [ ! -d "${PK_ANALYSIS_REPO_PATH}" ]; then
     echo "ERROR: PK-Analysis repository not found at ${PK_ANALYSIS_REPO_PATH}. Cannot update .env file."
@@ -88,9 +113,13 @@ ENV_CONTENT=$(cat <<EOF
 # and read by docker-compose.runtime.yml in PK-Analysis
 DEV_IMAGE_TAG=${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}
 MLFLOW_IMAGE_TAG=${FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY}
+GEMMA_IMAGE_TAG=${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY} # <<< ADD THIS
 POSTGRES_USER=mlflow_user
 POSTGRES_PASSWORD=yoursecurepassword # <<< CHANGE THIS IN THE ACTUAL .env FILE!
 POSTGRES_DB=mlflow_db
+HF_TOKEN=your_hugging_face_read_token_here
+DB_HOST=db
+DB_PORT=5432
 # Add other secrets/variables below if needed, they will be preserved.
 EOF
 )
