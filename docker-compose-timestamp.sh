@@ -70,7 +70,7 @@ then
 else
     echo "Image push skipped because PUSH_TO_REG==0"
     echo "--------------------------------------------------"
-    echo " DEV IMAGE Build Complete!"
+    echo " MLFLOW EXTENDED IMAGE Build Complete!"
     echo "--------------------------------------------------"
 fi
 
