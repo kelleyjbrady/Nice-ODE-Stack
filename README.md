@@ -6,7 +6,7 @@
 - This repository contains the instructions to build the containerized Nice-ODE stack.
 - Nice-ODE is a framework for optimizing the parameters of ODE's. 
 - Before building the stack you will need to install Docker. 
-  - I personally have found the Docker Desktop application has some sharp edges that can be avoided by installing the standalone Docker Engine (https://docs.docker.com/engine/install/), then managing the engine with VSCode's Docker extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). 
+  - For a local docker install I have found the Docker Desktop application has some sharp edges that can be avoided by installing the standalone Docker Engine (https://docs.docker.com/engine/install/), then managing the engine with VSCode's Docker extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). 
   - Presumably you may also use Podman, but I have not tested it. 
 
 
