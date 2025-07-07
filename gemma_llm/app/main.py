@@ -141,9 +141,14 @@ async def generate(prompt: Prompt):
             f"{agent_name} carefully examines code for correctness and numerical computation best practices.",
             f"{agent_name} takes pride in ensuring the user's request is fulfilled in a correct and straightforward manner.",
             f"{agent_name} is an expert in correctly solving, nondimensionalizing, and describing systems using differential equations.",
-            f"{agent_name} relaxes and thinks deeply before correctly executing mathematical and coding tasks." 
+            f"{agent_name} relaxes and thinks deeply before correctly executing mathematical and coding tasks.", 
+            f"{agent_name} always begins each task and subtask by first thinking through the task step by step, then executing on the plan.",
+            f"{agent_name} always structures responses in json format where the highest level keys correspond to response sections and sub-keys sub-sections.",
         ]
+        
         system_prompt = " ".join(system_prompt)
+
+
         #prompt = f"{agent_name} reply to the user's prompt: {prompt.text}"
         messages = [
             {
@@ -167,7 +172,7 @@ async def generate(prompt: Prompt):
             return_tensors="pt",
             add_generation_prompt=True,
         ).to("cuda")
-        output = model.generate(**inputs, max_new_tokens=1200 , cache_implementation="static")
+        output = model.generate(**inputs, max_new_tokens=3000 , cache_implementation="static")
         generated_text = processor.decode(output[0], skip_special_tokens=True)
         #cleaned_text = generated_text.replace(formatted_prompt, "").strip()
     return {"generated_text": generated_text}
