@@ -33,7 +33,7 @@
 ## Building
 1) Clone this repo to your PC.
 2) Open Terminal and `cd` into the directory where the repo was cloned
-   1) eg. `git_repos/ode-cuda-container`
+   1) eg. `git_repos/nice-ode-stack`
 
 3) Run the bash script `docker-compose-timestamp.sh` as shown below. 
    1) The compose log will be stored in `./docker_compose.log`. 
@@ -46,5 +46,5 @@
 
 
 ```
-your-machine-name:~/git_repos/ode-cuda-container$ ./docker-compose-timestamp.sh > docker_compose.log 2>&1
+your-machine-name:~/git_repos/nice-ode-stack$ ./docker-compose-timestamp.sh > docker_compose.log 2>&1
 ```
