@@ -6,8 +6,9 @@ DEV_IMAGE_BASE_NAME="cuda-py"
 MLFLOW_IMAGE_BASE_NAME="mlflow-postgres"
 GEMMA_IMAGE_BASE_NAME="gemma-llm"
 COMPOSE_GEMMA=0
-# Your container registry (e.g., your Docker Hub username, ghcr.io/yourgithubusername)
-REGISTRY_PATH="kelleyjbrady" # <<< REPLACE THIS (e.g., ghcr.io/yourusername)
+
+REGISTRY_PATH="not-used"
+
 # Path to the PK-Analysis repo's .env file (ADJUST IF YOUR REPOS ARE NOT SIBLINGS)
 PK_ANALYSIS_REPO_PATH="../PK-Analysis"
 PK_ANALYSIS_ENV_FILE="${PK_ANALYSIS_REPO_PATH}/.env"
@@ -129,6 +130,7 @@ EOF
 )
 
 # Preserve existing non-tag lines from .env if they exist
+# This grep should be adjusted if additional lines are added to .env
 if [ -f "${PK_ANALYSIS_ENV_FILE}" ]; then
     EXISTING_OTHER_VARS=$(grep -v -e '^DEV_IMAGE_TAG=' -e '^MLFLOW_IMAGE_TAG=' -e '^GEMMA_IMAGE_TAG=' -e '^HF_TOKEN=' -e '^POSTGRES_USER=' -e '^POSTGRES_PASSWORD=' -e '^POSTGRES_DB=' -e '^DB_HOST=' -e '^DB_PORT=' -e '^# This file is managed' "${PK_ANALYSIS_ENV_FILE}" || true)
     if [ -n "${EXISTING_OTHER_VARS}" ]; then
