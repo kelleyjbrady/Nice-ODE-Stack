@@ -98,6 +98,7 @@ if [ "$COMPOSE_GEMMA" -eq 1 ]; then
         echo "--------------------------------------------------"
     fi
 else
+    FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY="gemma3_is_not_composed"
     echo "Skipping GEMMA LLM IMAGE Build"
 fi
 
