@@ -41,7 +41,7 @@ RUN apt-get update && \
     # Add the CRAN GPG key and repository for Ubuntu 22.04 (Jammy)
     && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
     add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/' && \
-    # Update apt lists again and install R and its dependencies
+# Update apt lists again and install R and its dependencies
     apt-get update && \
     apt-get install -y --no-install-recommends \
         r-base \
@@ -51,12 +51,13 @@ RUN apt-get update && \
         libxml2-dev \
         libfontconfig1-dev \
         libharfbuzz-dev \
-         libfribidi-dev \
+        libfribidi-dev \
         libcairo2-dev \
         libxt-dev \
         # Added for symengine and other scientific packages
         libgmp-dev \
         libmpfr-dev \
+        libuv1-dev \
     # Clean up apt caches to reduce image size
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*

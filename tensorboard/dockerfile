@@ -1,0 +1,15 @@
+FROM python:3.12-slim
+
+ARG XPROF_VERSION=2.21.3
+
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir xprof==${XPROF_VERSION}
+
+EXPOSE 8791 50051
+
+ENTRYPOINT ["xprof"]
+
+CMD ["--logdir=/app/logs", "--port=8791"]
