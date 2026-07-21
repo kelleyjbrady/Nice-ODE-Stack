@@ -8,7 +8,7 @@ GEMMA_IMAGE_BASE_NAME="gemma-llm"
 TENSORBOARD_IMAGE_BASE_NAME="tensorboard" # <--- ADDED
 COMPOSE_GEMMA=0
 
-REGISTRY_PATH="not-used"
+REGISTRY_PATH="ghcr.io/niceode-llc"
 
 # Path to the PK-Analysis repo's .env file (ADJUST IF YOUR REPOS ARE NOT SIBLINGS)
 PK_ANALYSIS_REPO_PATH="../PK-Analysis"
@@ -29,7 +29,7 @@ docker compose -f ./docker-compose.yml build --no-cache dev_env_builder
 echo "Tagging dev image for registry: ${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}"
 docker tag "${LOCAL_DEV_IMAGE_NAME_WITH_TAG}" "${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}"
 
-PUSH_TO_REG=0
+PUSH_TO_REG=1
 if [ "$PUSH_TO_REG" -eq 1 ]
 then
     echo "Pushing dev image: ${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}"
