@@ -1,11 +1,14 @@
+Package, Version
+# version control
+renv, 1.2.3
 # R packages for VS Code integration and development
-languageserver
-lintr
+languageserver, 0.3.18
+lintr, 3.3.0-1
 
 # Optional but recommended:
 # Often needed by language server or other tools
 #jsonlite 
 # For code formatting
-styler
+styler, 1.11.0
 # For alternative plot viewing in VS Code   
-#httpgd   
+#httpgd

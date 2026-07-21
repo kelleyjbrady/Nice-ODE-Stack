@@ -1,5 +1,8 @@
 FROM nvidia/cuda:12.4.1-base-ubuntu22.04
 
+LABEL org.opencontainers.image.source="https://github.com/NiceODE-LLC/NiceODE"
+LABEL org.opencontainers.image.description="Base CUDA 12.4 environment with Python 3.13, R, and Julia"
+
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     # --- Locale Settings ---
@@ -44,8 +47,8 @@ RUN apt-get update && \
 # Update apt lists again and install R and its dependencies
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        r-base \
-        r-base-dev \
+        r-base=4.6.* \
+        r-base-dev=4.4.* \
         libcurl4-openssl-dev \
         libssl-dev \
         libxml2-dev \
@@ -108,10 +111,21 @@ RUN cd /tmp && \
     # Verify installation
     julia --version
 
+# --- Global R Setup ---
+# 1. Install 'remotes' first
+RUN R -e "install.packages('remotes', repos = 'https://cloud.r-project.org/')"
 
-#R package installation
-COPY r_requirements.txt install_R_pkgs.R /tmp/
-RUN cd /tmp && Rscript install_R_pkgs.R && rm /tmp/r_requirements.txt /tmp/install_R_pkgs.R
+# 2. Copy the installation script and the CSV package list
+COPY r_requirements.csv install_R_pkgs.R /tmp/
+
+# 3. Execute the script to install the exact versions specified in the CSV
+RUN cd /tmp && Rscript install_R_pkgs.R && \
+    rm /tmp/r_requirements.csv /tmp/install_R_pkgs.R
+
+# 4. Set up the renv global cache directory so it is ready for the Dev Container
+ENV RENV_PATHS_CACHE=/opt/renv/cache
+RUN mkdir -p ${RENV_PATHS_CACHE} && \
+    chown -R ${USER_UID}:${USER_GID} /opt/renv
 
 
 # --- Application Setup (as root for installation) ---
@@ -161,7 +175,7 @@ RUN DEV_TOOLS_VENV_PATH=$(poetry env info --path) && \
 RUN rm -rf /build_env_tools # Clean up build context directory
 
 # Copy the rest of the application source code
-COPY . .
+#COPY . .
 
 #Grant ownership of the app directory AND the *contents* of the venvs to the user
 # The parent /opt/poetry-venvs is already owned by the user from the earlier step
