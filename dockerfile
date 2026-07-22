@@ -1,7 +1,7 @@
 FROM nvidia/cuda:12.4.1-base-ubuntu22.04
 
 LABEL org.opencontainers.image.source="https://github.com/NiceODE-LLC/NiceODE"
-LABEL org.opencontainers.image.description="Base CUDA 12.4 environment with Python 3.13, R, and Julia"
+LABEL org.opencontainers.image.description="Base CUDA 12.4 environment with Python 3.13.14, R 4.6.1, and Julia 1.12.6"
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -47,8 +47,8 @@ RUN apt-get update && \
 # Update apt lists again and install R and its dependencies
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        r-base=4.6.* \
-        r-base-dev=4.4.* \
+        r-base=4.6.1-* \
+        r-base-dev=4.6.1-* \
         libcurl4-openssl-dev \
         libssl-dev \
         libxml2-dev \
@@ -79,9 +79,9 @@ RUN apt-get update && \
 
 # Example: Install Python 3.13 (adjust version as needed/available)
 RUN apt-get install -y --no-install-recommends \   
-        python3.13 \
-        python3.13-dev \
-        python3.13-venv && \
+        python3.13=3.13.14-* \
+        python3.13-dev=3.13.14-* \
+        python3.13-venv=3.13.14-* && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -93,7 +93,7 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 # Ensure pip is correctly linked, install 'tools' into the system python
 RUN python3 -m ensurepip --upgrade && \
  pip3 install --no-cache-dir --upgrade pip && \
- pip3 install --no-cache-dir poetry
+ pip3 install --no-cache-dir poetry==2.4.*
  # Optional: Add completions globally
 RUN mkdir -p /etc/bash_completion.d && \
 poetry completions bash > /etc/bash_completion.d/poetry.bash
@@ -102,14 +102,24 @@ poetry completions bash > /etc/bash_completion.d/poetry.bash
 # --- Julia Setup ---
 # Download and install Julia from official binaries
 RUN cd /tmp && \
-    wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.11/julia-1.11.4-linux-x86_64.tar.gz && \
+    wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.6-linux-x86_64.tar.gz && \
     # Optional: Add SHA256 verification here if needed
     # echo "<EXPECTED_SHA256_HASH> *julia-${JULIA_VERSION}-linux-x86_64.tar.gz" | sha256sum -c - && \
-    tar -xzf julia-1.11.4-linux-x86_64.tar.gz -C /opt/ && \
-    ln -s /opt/julia-1.11.4/bin/julia /usr/local/bin/julia && \
-    rm julia-1.11.4-linux-x86_64.tar.gz && \
+    tar -xzf julia-1.12.6-linux-x86_64.tar.gz -C /opt/ && \
+    ln -s /opt/julia-1.12.6/bin/julia /usr/local/bin/julia && \
+    rm julia-1.12.6-linux-x86_64.tar.gz && \
     # Verify installation
     julia --version
+
+#-----Quarto Setup-----
+ARG QUARTO_VERSION="1.9.38" 
+RUN cd /tmp && \
+    curl -LO https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb && \
+    # Using apt-get install on a local .deb file automatically resolves any missing OS dependencies
+    apt-get install -y --no-install-recommends ./quarto-${QUARTO_VERSION}-linux-amd64.deb && \
+    rm quarto-${QUARTO_VERSION}-linux-amd64.deb && \
+    # Verify installation
+    quarto check
 
 # --- Global R Setup ---
 # 1. Install 'remotes' first
@@ -124,6 +134,7 @@ RUN cd /tmp && Rscript install_R_pkgs.R && \
 
 # 4. Set up the renv global cache directory so it is ready for the Dev Container
 ENV RENV_PATHS_CACHE=/opt/renv/cache
+ENV RENV_CONFIG_EXTERNAL_LIBRARIES=/usr/local/lib/R/site-library
 RUN mkdir -p ${RENV_PATHS_CACHE} && \
     chown -R ${USER_UID}:${USER_GID} /opt/renv
 
