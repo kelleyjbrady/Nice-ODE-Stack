@@ -3,12 +3,19 @@ Package, Version
 renv, 1.2.3
 # R packages for VS Code integration and development
 languageserver, 0.3.18
-lintr, 3.3.0-1
+lintr, 3.4.0
 
 # Optional but recommended:
 # Often needed by language server or other tools
-#jsonlite 
+jsonlite, 2.0.0 
 # For code formatting
 styler, 1.11.0
 # For alternative plot viewing in VS Code   
-#httpgd
+httpgd, 2.1.4
+
+# --- Quarto Execution Engines ---
+knitr, 1.51
+rmarkdown, 2.31
+
+# --- Vector Graphic Support ---
+svglite, 2.2.2

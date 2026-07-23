@@ -6,8 +6,6 @@ LABEL org.opencontainers.image.description="Base CUDA 12.4 environment with Pyth
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
     # --- Locale Settings ---
-    # Set the language and locale to en_US.UTF-8 system-wide
-    # This prevents locale warnings in R, Python, and other tools.
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
@@ -17,12 +15,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
     # Disable virtualenv creation in project directory, store centrally
     POETRY_VIRTUALENVS_IN_PROJECT=false \
     POETRY_VIRTUALENVS_PATH=/opt/poetry-venvs \
+    # Allow the global system library to pass through the renv sandbox (for VS Code tools)
+    RENV_CONFIG_EXTERNAL_LIBRARIES=/usr/local/lib/R/site-library \
     # Add poetry bin to PATH for root during build and later for the user
-    # Note: Installer puts it in .local/bin for the executing user (root here)
     PATH="/root/.local/bin:$PATH"
 
 # --- System Setup ---
-# Install system dependencies: Python, pip, git, common utilities, and build tools
+# Install system dependencies: common utilities, build tools, and SVG support
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         # Prerequisites for adding repositories
@@ -41,10 +40,15 @@ RUN apt-get update && \
         curl \
         vim \
         nano \
+        # --- Basic SVG & Image Rendering Support ---
+        librsvg2-bin \
+        libpng-dev \
+        libfreetype6-dev \
+        libjpeg-dev \
     # Add the CRAN GPG key and repository for Ubuntu 22.04 (Jammy)
     && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
     add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/' && \
-# Update apt lists again and install R and its dependencies
+    # Update apt lists again and install strictly pinned R and its dependencies
     apt-get update && \
     apt-get install -y --no-install-recommends \
         r-base=4.6.1-* \
@@ -67,18 +71,16 @@ RUN apt-get update && \
 
 # --- Generate Locale ---
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
-locale-gen
+    locale-gen
 
 # --- Python Setup ---
-# Install prerequisites for adding PPAs if necessary (curl/wget already there)
+# Add deadsnakes PPA and strictly pin Python 3.13 to the current patch level
 RUN apt-get update && \
     apt-get install -y --no-install-recommends software-properties-common && \
     # Add the deadsnakes PPA
     add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update
-
-# Example: Install Python 3.13 (adjust version as needed/available)
-RUN apt-get install -y --no-install-recommends \   
+    apt-get update && \
+    apt-get install -y --no-install-recommends \   
         python3.13=3.13.14-* \
         python3.13-dev=3.13.14-* \
         python3.13-venv=3.13.14-* && \
@@ -90,21 +92,18 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.13 2 && \
     update-alternatives --set python3 /usr/bin/python3.13
 
-# Ensure pip is correctly linked, install 'tools' into the system python
+# Ensure pip is linked, install specific version of Poetry
 RUN python3 -m ensurepip --upgrade && \
- pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir --upgrade pip && \
  pip3 install --no-cache-dir poetry==2.4.*
  # Optional: Add completions globally
 RUN mkdir -p /etc/bash_completion.d && \
-poetry completions bash > /etc/bash_completion.d/poetry.bash
-
+    poetry completions bash > /etc/bash_completion.d/poetry.bash
 
 # --- Julia Setup ---
 # Download and install Julia from official binaries
 RUN cd /tmp && \
     wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.6-linux-x86_64.tar.gz && \
-    # Optional: Add SHA256 verification here if needed
-    # echo "<EXPECTED_SHA256_HASH> *julia-${JULIA_VERSION}-linux-x86_64.tar.gz" | sha256sum -c - && \
     tar -xzf julia-1.12.6-linux-x86_64.tar.gz -C /opt/ && \
     ln -s /opt/julia-1.12.6/bin/julia /usr/local/bin/julia && \
     rm julia-1.12.6-linux-x86_64.tar.gz && \
@@ -115,36 +114,26 @@ RUN cd /tmp && \
 ARG QUARTO_VERSION="1.9.38" 
 RUN cd /tmp && \
     curl -LO https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb && \
-    # Using apt-get install on a local .deb file automatically resolves any missing OS dependencies
+    # apt-get install locally resolves missing lightweight OS dependencies
     apt-get install -y --no-install-recommends ./quarto-${QUARTO_VERSION}-linux-amd64.deb && \
     rm quarto-${QUARTO_VERSION}-linux-amd64.deb && \
-    # Verify installation
     quarto check
 
 # --- Global R Setup ---
-# 1. Install 'remotes' first
 RUN R -e "install.packages('remotes', repos = 'https://cloud.r-project.org/')"
 
-# 2. Copy the installation script and the CSV package list
 COPY r_requirements.csv install_R_pkgs.R /tmp/
-
-# 3. Execute the script to install the exact versions specified in the CSV
 RUN cd /tmp && Rscript install_R_pkgs.R && \
     rm /tmp/r_requirements.csv /tmp/install_R_pkgs.R
 
-# 4. Set up the renv global cache directory so it is ready for the Dev Container
 ENV RENV_PATHS_CACHE=/opt/renv/cache
-ENV RENV_CONFIG_EXTERNAL_LIBRARIES=/usr/local/lib/R/site-library
 RUN mkdir -p ${RENV_PATHS_CACHE} && \
     chown -R ${USER_UID}:${USER_GID} /opt/renv
 
-
 # --- Application Setup (as root for installation) ---
-# Set a work directory for the application build steps
 ARG DEV_TOOLS_PROJ_PATH=/workspaces/cuda-py-dev-tools
 WORKDIR $DEV_TOOLS_PROJ_PATH
 
-# Copy only dependency definition files first to leverage Docker cache
 COPY pyproject.toml poetry.lock* ./
 
 # ---- User setup ----
@@ -161,9 +150,10 @@ RUN mkdir -p ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R/library && \
 
 # --- Copy user .Rprofile to ensure user library path is prioritized ---
 # Copy the pre-made .Rprofile into the user's home directory
-COPY .Rprofile /home/${USERNAME}/.Rprofile
+#COPY .Rprofile /home/${USERNAME}/.Rprofile
+
 # Ensure the .Rprofile is owned by the user
-RUN chown ${USERNAME}:${USER_GID} /home/${USERNAME}/.Rprofile
+#RUN chown ${USERNAME}:${USER_GID} /home/${USERNAME}/.Rprofile
 
 
 # Install dev tools dependencies using Poetry
@@ -174,38 +164,20 @@ RUN chown ${USERNAME}:${USER_GID} /home/${USERNAME}/.Rprofile
 RUN poetry install --no-interaction --no-ansi --no-root --no-cache
 
 # --- Make tools from the dev tools venv easily accessible ---
-# Get the full path to the virtual environment created by the 'poetry install' above
 RUN DEV_TOOLS_VENV_PATH=$(poetry env info --path) && \
-    echo "Dev tools venv path: ${DEV_TOOLS_VENV_PATH}" && \
-    # Add this venv's bin directory to the PATH for all users/shells
-    # This makes tools like ruff, radian, jupyter callable directly
     echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" >> /etc/bash.bashrc && \
     echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" > /etc/profile.d/dev_tools_poetry_env.sh && \
-    chmod +x /etc/profile.d/dev_tools_poetry_env.sh
+    chmod +x /etc/profile.d/dev_tools_poetry_env.sh && \
+    rm -rf /build_env_tools
 
-RUN rm -rf /build_env_tools # Clean up build context directory
-
-# Copy the rest of the application source code
-#COPY . .
-
-#Grant ownership of the app directory AND the *contents* of the venvs to the user
-# The parent /opt/poetry-venvs is already owned by the user from the earlier step
 RUN chown -R $USERNAME:$USER_GID ${DEV_TOOLS_PROJ_PATH} ${POETRY_VIRTUALENVS_PATH}
 
-# Switch context to the non-root user
+# --- Switch context to the non-root user ---
 USER $USERNAME
 
-# Set home environment variable and update PATH for user's local bin and poetry
-# Note: The poetry executable itself should now be accessible via the inherited PATH
-# or we can explicitly add the expected user location if needed.
-# The venv path is NOT added here; use 'poetry run' or 'poetry shell'.
 ARG HOME=/home/$USERNAME
 ENV HOME=$HOME \
     PATH="$HOME/.local/bin:$PATH" \
     R_LIBS_USER=$HOME/R/library
 
 WORKDIR /home/${USERNAME}
-
-# --- Development Environment Ready ---
-# Keep container running for VS Code to attach
-#CMD ["sleep", "infinity"]
