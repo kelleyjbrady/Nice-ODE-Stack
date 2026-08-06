@@ -1,11 +1,20 @@
 #!/bin/bash
 set -e
 
+# --- Capture Git Commit for OCI Labels ---
+GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+  GIT_COMMIT="${GIT_COMMIT}-dirty"
+  echo "WARNING: Building with uncommitted changes ($GIT_COMMIT)"
+else
+  echo "Building images for commit: $GIT_COMMIT"
+fi
+
 # --- Configuration ---
 DEV_IMAGE_BASE_NAME="cuda-py"
 MLFLOW_IMAGE_BASE_NAME="mlflow-postgres"
 GEMMA_IMAGE_BASE_NAME="gemma-llm"
-TENSORBOARD_IMAGE_BASE_NAME="tensorboard" # <--- ADDED
+TENSORBOARD_IMAGE_BASE_NAME="tensorboard"
 COMPOSE_GEMMA=0
 
 REGISTRY_PATH="ghcr.io/niceode-llc"
@@ -24,7 +33,9 @@ REGISTRY_DEV_IMAGE_NAME_WITH_TAG="${REGISTRY_PATH}/${DEV_IMAGE_BASE_NAME}:${DEV_
 export BUILD_TAG=${DEV_BUILD_TAG} 
 
 echo "Building dev image. It will be tagged as '${LOCAL_DEV_IMAGE_NAME_WITH_TAG}' by docker-compose.yml"
-docker compose -f ./docker-compose.yml build --no-cache dev_env_builder
+docker compose -f ./docker-compose.yml build \
+  --build-arg GIT_COMMIT="${GIT_COMMIT}" \
+  --no-cache dev_env_builder
 
 echo "Tagging dev image for registry: ${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}"
 docker tag "${LOCAL_DEV_IMAGE_NAME_WITH_TAG}" "${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}"
@@ -52,7 +63,9 @@ echo "Starting MLFLOW EXTENDED IMAGE build process..."
 FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY="${REGISTRY_PATH}/${MLFLOW_IMAGE_BASE_NAME}:${DEV_BUILD_TAG}"
 
 echo "Building MLFLOW EXTENDED image: ${FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY}"
-docker build --no-cache -t "${FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY}" ./mlflow_image/
+docker build --no-cache \
+  --build-arg GIT_COMMIT="${GIT_COMMIT}" \
+  -t "${FULL_MLFLOW_IMAGE_TAG_WITH_REGISTRY}" ./mlflow_image/
 
 if [ "$PUSH_TO_REG" -eq 1 ]
 then
@@ -69,14 +82,15 @@ else
     echo "--------------------------------------------------"
 fi
 
-# --- TensorBoard / XProf Image Build Process (ADDED) ---
+# --- TensorBoard / XProf Image Build Process ---
 echo ""
 echo "Starting TENSORBOARD IMAGE build process..."
 FULL_TENSORBOARD_IMAGE_TAG_WITH_REGISTRY="${REGISTRY_PATH}/${TENSORBOARD_IMAGE_BASE_NAME}:${DEV_BUILD_TAG}"
 
 echo "Building TENSORBOARD image: ${FULL_TENSORBOARD_IMAGE_TAG_WITH_REGISTRY}"
-# Assumes your Dockerfile is inside a folder named `tensorboard`
-docker build --no-cache -t "${FULL_TENSORBOARD_IMAGE_TAG_WITH_REGISTRY}" ./tensorboard/
+docker build --no-cache \
+  --build-arg GIT_COMMIT="${GIT_COMMIT}" \
+  -t "${FULL_TENSORBOARD_IMAGE_TAG_WITH_REGISTRY}" ./tensorboard/
 
 if [ "$PUSH_TO_REG" -eq 1 ]
 then
@@ -100,7 +114,9 @@ if [ "$COMPOSE_GEMMA" -eq 1 ]; then
     FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY="${REGISTRY_PATH}/${GEMMA_IMAGE_BASE_NAME}:${DEV_BUILD_TAG}"
 
     echo "Building GEMMA LLM image: ${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}"
-    docker build --no-cache -t "${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}" ./gemma_llm/
+    docker build --no-cache \
+      --build-arg GIT_COMMIT="${GIT_COMMIT}" \
+      -t "${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}" ./gemma_llm/
 
     if [ "$PUSH_TO_REG" -eq 1 ]; then
         echo "Pushing GEMMA LLM image: ${FULL_GEMMA_IMAGE_TAG_WITH_REGISTRY}"

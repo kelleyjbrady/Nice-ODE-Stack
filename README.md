@@ -1,5 +1,9 @@
 # Nice-ODE Stack
 
+## Package Availability 
+
+The containers built by this repository are available here: (https://github.com/orgs/NiceODE-LLC/packages)
+
 
 ## Introduction
 

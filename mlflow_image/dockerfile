@@ -2,6 +2,11 @@
 # Use a specific version of the official MLflow image
 FROM ghcr.io/mlflow/mlflow:v2.22.0 
 
+ARG GIT_COMMIT=unspecified
+LABEL org.opencontainers.image.revision=$GIT_COMMIT
+LABEL org.opencontainers.image.source="https://github.com/kelleyjbrady/Nice-ODE-Stack"
+LABEL org.opencontainers.image.description="MLFlow sever for tracking NiceODE experiments and runs"
+
 # Install PostgreSQL Python driver AND gosu for privilege dropping
 RUN apt-get update && apt-get install -y --no-install-recommends gosu && \
     rm -rf /var/lib/apt/lists/* && \

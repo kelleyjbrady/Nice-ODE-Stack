@@ -1,6 +1,8 @@
 FROM nvidia/cuda:12.4.1-base-ubuntu22.04
 
-LABEL org.opencontainers.image.source="https://github.com/NiceODE-LLC/NiceODE"
+ARG GIT_COMMIT=unspecified
+LABEL org.opencontainers.image.revision=$GIT_COMMIT
+LABEL org.opencontainers.image.source="https://github.com/kelleyjbrady/Nice-ODE-Stack"
 LABEL org.opencontainers.image.description="Base CUDA 12.4 environment with Python 3.13.14, R 4.6.1, and Julia 1.12.6"
 
 # Set environment variables
