@@ -76,29 +76,28 @@ RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
     locale-gen
 
 # --- Python Setup ---
-# Add deadsnakes PPA and strictly pin Python 3.13 to the current patch level
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends software-properties-common && \
-    # Add the deadsnakes PPA
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \   
-        python3.13=3.13.14-* \
-        python3.13-dev=3.13.14-* \
-        python3.13-venv=3.13.14-* && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# 1. Pull the compiled uv binary directly from Astral's official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+ENV UV_PYTHON_INSTALL_DIR=/opt/python
 
-# Update alternatives to make python3 point to python3.13
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.13 2 && \
-    update-alternatives --set python3 /usr/bin/python3.13
+# 2. Download the exact patch and wire it into the system path
+RUN uv python install 3.13.14 && \
+    PYTHON_BIN=$(uv python find 3.13.14) && \
+    ln -s "$PYTHON_BIN" /usr/local/bin/python3.13 && \
+    ln -s "$PYTHON_BIN" /usr/local/bin/python3 && \
+    ln -s "$PYTHON_BIN" /usr/local/bin/python
 
-# Ensure pip is linked, install specific version of Poetry
-RUN python3 -m ensurepip --upgrade && \
-    pip3 install --no-cache-dir --upgrade pip && \
- pip3 install --no-cache-dir poetry==2.4.*
- # Optional: Add completions globally
+# 3. Use uv's installer to inject pip and poetry directly 
+RUN PYTHON_BIN=$(uv python find 3.13.14) && \
+    PYTHON_BIN_DIR=$(dirname "$PYTHON_BIN") && \
+    # Explicitly bypass the PEP 668 lock since we are configuring the Docker base layer
+    uv pip install --python "$PYTHON_BIN" --break-system-packages pip poetry==2.4.* && \
+    # Symlink the newly installed tools so they are globally accessible
+    ln -s "$PYTHON_BIN_DIR/pip3" /usr/local/bin/pip3 && \
+    ln -s "$PYTHON_BIN_DIR/pip" /usr/local/bin/pip && \
+    ln -s "$PYTHON_BIN_DIR/poetry" /usr/local/bin/poetry
+
+# Optional: Add completions globally
 RUN mkdir -p /etc/bash_completion.d && \
     poetry completions bash > /etc/bash_completion.d/poetry.bash
 
