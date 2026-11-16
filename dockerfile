@@ -23,12 +23,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/root/.local/bin:$PATH"
 
 # --- System Setup ---
-# Install system dependencies: common utilities, build tools, and SVG support
+# Install system dependencies: common utilities, build tools, SVG/R build libs, and Posit R 4.6.1
+ARG R_VERSION=4.6.1
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        # Prerequisites for adding repositories
-        software-properties-common \
-        dirmngr \
         # Locales package
         locales \
         # Compilers and build tools
@@ -40,6 +38,7 @@ RUN apt-get update && \
         git \
         wget \
         curl \
+        ca-certificates \
         vim \
         nano \
         # --- Basic SVG & Image Rendering Support ---
@@ -47,14 +46,7 @@ RUN apt-get update && \
         libpng-dev \
         libfreetype6-dev \
         libjpeg-dev \
-    # Add the CRAN GPG key and repository for Ubuntu 22.04 (Jammy)
-    && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
-    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/' && \
-    # Update apt lists again and install strictly pinned R and its dependencies
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        r-base=4.6.1-* \
-        r-base-dev=4.6.1-* \
+        # R package build dependencies
         libcurl4-openssl-dev \
         libssl-dev \
         libxml2-dev \
@@ -70,8 +62,14 @@ RUN apt-get update && \
         # Pandoc and zlib for knitr, rmarkdown, haven, StanHeaders
         pandoc \
         zlib1g-dev \
+    # Install exact R version from Posit precompiled .deb (immune to CRAN apt repo drift)
+    && curl -fsSL -o /tmp/r-${R_VERSION}.deb "https://cdn.posit.co/r/ubuntu-2204/pkgs/r-${R_VERSION}_1_amd64.deb" && \
+    apt-get install -y --no-install-recommends /tmp/r-${R_VERSION}.deb && \
+    ln -sf /opt/R/${R_VERSION}/bin/R /usr/local/bin/R && \
+    ln -sf /opt/R/${R_VERSION}/bin/Rscript /usr/local/bin/Rscript && \
+    rm -f /tmp/r-${R_VERSION}.deb && \
     # Clean up apt caches to reduce image size
-    && apt-get clean && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # --- Generate Locale ---
@@ -135,7 +133,7 @@ RUN mkdir -p ${RENV_PATHS_CACHE}
 
 # Pre-populate renv cache with all project dependencies from renv.lock
 COPY renv.lock /tmp/renv.lock
-RUN R -e "options(Ncpus = max(1, parallel::detectCores())); renv::restore(lockfile = '/tmp/renv.lock', library = tempdir(), prompt = FALSE)" && \
+RUN R -e "options(Ncpus = max(1, parallel::detectCores())); renv::restore(lockfile = '/tmp/renv.lock', library = tempdir(), exclude = 'spatial', prompt = FALSE)" && \
     rm /tmp/renv.lock
 
 # --- Application Setup (as root for installation) ---
