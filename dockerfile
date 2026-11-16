@@ -67,6 +67,9 @@ RUN apt-get update && \
         libgmp-dev \
         libmpfr-dev \
         libuv1-dev \
+        # Pandoc and zlib for knitr, rmarkdown, haven, StanHeaders
+        pandoc \
+        zlib1g-dev \
     # Clean up apt caches to reduce image size
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -128,14 +131,19 @@ RUN cd /tmp && Rscript install_R_pkgs.R && \
     rm /tmp/r_requirements.csv /tmp/install_R_pkgs.R
 
 ENV RENV_PATHS_CACHE=/opt/renv/cache
-RUN mkdir -p ${RENV_PATHS_CACHE} && \
-    chown -R ${USER_UID}:${USER_GID} /opt/renv
+RUN mkdir -p ${RENV_PATHS_CACHE}
+
+# Pre-populate renv cache with all project dependencies from renv.lock
+COPY renv.lock /tmp/renv.lock
+RUN R -e "options(Ncpus = max(1, parallel::detectCores())); renv::restore(lockfile = '/tmp/renv.lock', library = tempdir(), prompt = FALSE)" && \
+    rm /tmp/renv.lock
 
 # --- Application Setup (as root for installation) ---
+# 1. Dev Tools Setup (radian, ruff, jupyterlab)
 ARG DEV_TOOLS_PROJ_PATH=/workspaces/cuda-py-dev-tools
 WORKDIR $DEV_TOOLS_PROJ_PATH
 
-COPY pyproject.toml poetry.lock* ./
+COPY pyproject.dev-tools.toml ./pyproject.toml
 
 # ---- User setup ----
 ARG USERNAME=vscode
@@ -144,34 +152,35 @@ ARG USERNAME=vscode
 RUN groupadd --gid $USER_GID $USERNAME && \
     useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
-
 # Create necessary directories needed by the user and set ownership *before* switching user
 RUN mkdir -p ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R/library && \
-    chown ${USERNAME}:${USER_GID} ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R /home/${USERNAME}/R/library
-
-# --- Copy user .Rprofile to ensure user library path is prioritized ---
-# Copy the pre-made .Rprofile into the user's home directory
-#COPY .Rprofile /home/${USERNAME}/.Rprofile
-
-# Ensure the .Rprofile is owned by the user
-#RUN chown ${USERNAME}:${USER_GID} /home/${USERNAME}/.Rprofile
-
+    chown -R ${USERNAME}:${USER_GID} ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R /home/${USERNAME}/R/library
 
 # Install dev tools dependencies using Poetry
-# --no-interaction: Do not ask interactive questions
-# --no-ansi: Produce plain output
-# --no-root: Skip installing the project package itself (if it's an app, not a library)
-# This command creates the virtualenv based on POETRY_VIRTUALENVS_PATH
 RUN poetry install --no-interaction --no-ansi --no-root --no-cache
 
 # --- Make tools from the dev tools venv easily accessible ---
 RUN DEV_TOOLS_VENV_PATH=$(poetry env info --path) && \
     echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" >> /etc/bash.bashrc && \
     echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" > /etc/profile.d/dev_tools_poetry_env.sh && \
-    chmod +x /etc/profile.d/dev_tools_poetry_env.sh && \
-    rm -rf /build_env_tools
+    chmod +x /etc/profile.d/dev_tools_poetry_env.sh
 
-RUN chown -R $USERNAME:$USER_GID ${DEV_TOOLS_PROJ_PATH} ${POETRY_VIRTUALENVS_PATH}
+# 2. Project Dependencies Pre-installation (PK-Analysis / niceode)
+ARG PROJECT_PATH=/workspaces/PK-Analysis
+WORKDIR $PROJECT_PATH
+
+COPY pyproject.toml poetry.lock ./
+# Pre-install all project dependencies into /opt/poetry-venvs/
+RUN poetry install --no-interaction --no-ansi --no-root --no-cache
+
+# Expose project venv to PATH globally so python, pytest, etc. are immediately available
+RUN PROJECT_VENV_PATH=$(poetry env info --path) && \
+    echo "export PATH=\"${PROJECT_VENV_PATH}/bin:\$PATH\"" >> /etc/bash.bashrc && \
+    echo "export PATH=\"${PROJECT_VENV_PATH}/bin:\$PATH\"" > /etc/profile.d/project_poetry_env.sh && \
+    chmod +x /etc/profile.d/project_poetry_env.sh
+
+# Ensure vscode user owns everything in virtualenvs and renv cache for mutability
+RUN chown -R $USERNAME:$USER_GID ${DEV_TOOLS_PROJ_PATH} ${PROJECT_PATH} ${POETRY_VIRTUALENVS_PATH} /opt/renv
 
 # --- Switch context to the non-root user ---
 USER $USERNAME
@@ -180,5 +189,9 @@ ARG HOME=/home/$USERNAME
 ENV HOME=$HOME \
     PATH="$HOME/.local/bin:$PATH" \
     R_LIBS_USER=$HOME/R/library
+
+# Install Antigravity CLI (agy) into $HOME/.local/bin and pre-create config dir for volume mounts
+RUN curl -fsSL https://antigravity.google/cli/install.sh | bash && \
+    mkdir -p $HOME/.gemini/antigravity-cli
 
 WORKDIR /home/${USERNAME}
