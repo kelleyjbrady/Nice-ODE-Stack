@@ -20,11 +20,14 @@ The containers built by this repository are available here: (https://github.com/
 
 - ./dockerfile
   - The central development container. 
-  - Installs dependencies needed to work with an 'advanced' Python setup
-    - CUDA
-    - Pytensor (PyMC dependency)
-    - R integration
-    - Poetry managed python dev-tools
+  - Installs dependencies needed to work with an 'advanced' Python setup:
+    - CUDA 12.4
+    - Pre-baked, locked R environment cached in `/opt/renv/cache` via `renv.lock`
+    - Pre-baked, locked Python environment installed in `/opt/poetry-venvs` via `poetry.lock`
+    - Global CLI dev tools (`radian`, `ruff`, `jupyterlab`)
+    - Preserves full mutability for both Python and R in dev containers
+- ./.devcontainer/
+  - Dev container configuration with Docker-outside-of-Docker and Python 3.13 for building containers in an isolated VS Code environment.
 - ./mlflow_image/
   - A local mlflow (https://mlflow.org/) server to track your work
   - Connects to a default PostgreSQL container defined in Nice-ODE's runtime docker compose file (not in this repo)

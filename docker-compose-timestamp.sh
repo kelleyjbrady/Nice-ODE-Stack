@@ -19,8 +19,12 @@ COMPOSE_GEMMA=0
 
 REGISTRY_PATH="ghcr.io/niceode-llc"
 
-# Path to the PK-Analysis repo's .env file (ADJUST IF YOUR REPOS ARE NOT SIBLINGS)
-PK_ANALYSIS_REPO_PATH="../PK-Analysis"
+# Path to the PK-Analysis repo's .env file (checks devcontainer mount first, then sibling directory)
+if [ -d "/workspaces/PK-Analysis" ]; then
+    PK_ANALYSIS_REPO_PATH="/workspaces/PK-Analysis"
+else
+    PK_ANALYSIS_REPO_PATH="../PK-Analysis"
+fi
 PK_ANALYSIS_ENV_FILE="${PK_ANALYSIS_REPO_PATH}/.env"
 
 
