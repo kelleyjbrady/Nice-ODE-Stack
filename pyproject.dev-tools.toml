@@ -1,0 +1,16 @@
+# proj-cuda-container/pyproject.dev-tools.toml
+[tool.poetry]
+name = "cuda-py-dev-tools"
+version = "0.1.0"
+description = "Core development tools for the cuda-py base image"
+authors = ["Kelley Brady <kelleyjbrady@protonmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.13" # Match Python version installed in Dockerfile
+ruff = "^0.11"
+radian = "^0.6"
+jupyterlab = "^4.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

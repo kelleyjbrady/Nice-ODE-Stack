@@ -1,13 +1,75 @@
-# proj-cuda-container/pyproject.toml
 [tool.poetry]
-name = "cuda-py-dev-tools"
+name = "niceode"
 version = "0.1.0"
-description = "Core development tools for the cuda-py base image"
-authors = ["Kelley Brady kelleyjbrady@protonmail.com"]
+packages = [
+    { include = "niceode", from = "src" }
+]
+description = "JAX project with CUDA support managed by Poetry"
+authors = ["Kelley Brady <kelleyjbrady@protonmail.com>"]
+
+
+[[tool.poetry.source]]
+name = "jax"
+url = "https://storage.googleapis.com/jax-releases/jax_cuda_releases.html"
+priority = "explicit"
 
 [tool.poetry.dependencies]
-python = "^3.13" # Match Python version installed in Dockerfile
-ruff = "^0.11"    # Example version, use desired
-radian = "^0.6"  # Example version, use desired
-jupyterlab = "^4.4" # Example version, use desired
+python = ">=3.13,<3.14" 
+jax = {extras = ["cuda12"], version = "0.6.2"}
 
+pandas = "^2.2"
+numpy = "^2.2"
+scipy = "^1.15"
+diffrax = "^0.7.0"
+numpyro = "^0.18"
+blackjax = "^1.2.5"
+pymc = "^5.21"
+ipykernel = "^6.29"
+matplotlib = "^3.10"
+seaborn = "^0.13"
+#ruff = "^0.11"
+dash = "^3.0.1"
+icomo = { version = "1.0.3", extras = ["opt"] }
+joblib = "^1.4"
+scikit-learn = "^1.6"
+numba = "^0.61"
+tqdm = "^4.67"
+numdifftools = "^0.9" 
+statsmodels = "^0.14"
+line-profiler = "^4.2"
+nbformat = "^5.10" 
+rpy2 = "^3.5"
+mlflow = "^2.22.0"
+lightgbm = "^4.6.0"
+equinox = "^0.12.2"
+flax = "^0.10.7"
+optax = "^0.2.5"
+jaxopt = "^0.8.5"
+finitediffx = "^0.1.0"
+sympy = "^1.14.0"
+pymc-extras = {git = "https://github.com/pymc-devs/pymc-extras", rev = "32a42b4eed8fe64612442579de4a085ec780bbce"}
+bokeh = "^3.8.0"
+optimistix = "^0.0.11"
+graphviz = "^0.21"
+tensorflow-cpu = "^2.21.0"
+tabulate = "^0.10.0"
+typing-extensions = "^4.16.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.1,<10.0.0)",
+    "psycopg2-binary (>=2.9.13,<3.0.0)"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "mlflow_name(name): specify custom MLflow subdirectory for test isolation",
+    "quick: fast core regression subset for routine verification",
+    "extended: extended objective and IVP solver configuration regression matrix",
+    "slow: long-running E2E verification (e.g. TrueLaplace/IFT solves and multi-seed robustness sweeps)",
+]
