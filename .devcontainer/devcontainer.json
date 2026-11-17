@@ -1,6 +1,8 @@
 {
   "name": "ODE CUDA Container Builder",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "moby": false,
@@ -9,7 +11,8 @@
     },
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.13"
-    }
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "remoteUser": "vscode",
   "remoteEnv": {
