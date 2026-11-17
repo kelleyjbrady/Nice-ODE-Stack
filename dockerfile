@@ -33,6 +33,10 @@ RUN apt-get update && \
         g++ \
         build-essential \
         cmake \
+        ccache \
+        ninja-build \
+        gdb \
+        strace \
         # Common utilities
         graphviz \
         git \
@@ -41,6 +45,19 @@ RUN apt-get update && \
         ca-certificates \
         vim \
         nano \
+        ripgrep \
+        fd-find \
+        bat \
+        fzf \
+        jq \
+        tree \
+        tmux \
+        ncdu \
+        htop \
+        nvtop \
+        rsync \
+        pigz \
+        unzip \
         # --- Basic SVG & Image Rendering Support ---
         librsvg2-bin \
         libpng-dev \
@@ -74,7 +91,17 @@ RUN apt-get update && \
 
 # --- Generate Locale ---
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
-    locale-gen
+    locale-gen && \
+    printf '\nalias fd=fdfind\nalias bat=batcat\neval "$(zoxide init bash)"\n' >> /etc/bash.bashrc
+
+# --- Modern Navigation Tools (eza, zoxide) ---
+ARG EZA_VERSION=0.20.10
+ARG ZOXIDE_VERSION=0.9.6
+RUN ARCH=$(dpkg --print-architecture) && \
+    EZA_ARCH=$([ "$ARCH" = "amd64" ] && echo "x86_64" || echo "aarch64") && \
+    curl -fsSL "https://github.com/eza-community/eza/releases/download/v${EZA_VERSION}/eza_${EZA_ARCH}-unknown-linux-gnu.tar.gz" | tar -xz -C /usr/local/bin && \
+    ZOXIDE_ARCH=$([ "$ARCH" = "amd64" ] && echo "x86_64" || echo "aarch64") && \
+    curl -fsSL "https://github.com/ajeetdsouza/zoxide/releases/download/v${ZOXIDE_VERSION}/zoxide-${ZOXIDE_VERSION}-${ZOXIDE_ARCH}-unknown-linux-musl.tar.gz" | tar -xz -C /usr/local/bin zoxide
 
 # --- Python Setup ---
 # 1. Pull the compiled uv binary directly from Astral's official image
