@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.description="Tensorboard with XPROF for monitorin
 ARG GIT_COMMIT=unspecified
 LABEL org.opencontainers.image.revision=$GIT_COMMIT
 
-ARG XPROF_VERSION=2.21.3
+ARG XPROF_VERSION=2.24.2
 
 ENV PYTHONUNBUFFERED=1
 
