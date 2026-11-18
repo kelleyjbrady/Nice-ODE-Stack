@@ -20,24 +20,34 @@ COMPOSE_MLFLOW=1
 COMPOSE_TENSORBOARD=1
 COMPOSE_GEMMA=0
 PUSH_TO_REG=1
+NO_CACHE_FLAG="--no-cache"
 
-# If specific image targets are passed as arguments (dev, mlflow, tensorboard, gemma),
-# build only those; otherwise use the defaults above.
-if [ "$#" -gt 0 ]; then
+# If specific image targets or flags (--no-push, --cache) are passed as arguments,
+# apply them; otherwise use the defaults above.
+TARGETS=()
+for arg in "$@"; do
+    case "$arg" in
+        --no-push) PUSH_TO_REG=0 ;;
+        --cache) NO_CACHE_FLAG="" ;;
+        dev|mlflow|tensorboard|gemma) TARGETS+=("$arg") ;;
+        *)
+            echo "Unknown argument: '$arg'. Valid targets: dev, mlflow, tensorboard, gemma; optional flags: --no-push, --cache"
+            exit 1
+            ;;
+    esac
+done
+
+if [ "${#TARGETS[@]}" -gt 0 ]; then
     COMPOSE_DEV=0
     COMPOSE_MLFLOW=0
     COMPOSE_TENSORBOARD=0
     COMPOSE_GEMMA=0
-    for target in "$@"; do
+    for target in "${TARGETS[@]}"; do
         case "$target" in
             dev) COMPOSE_DEV=1 ;;
             mlflow) COMPOSE_MLFLOW=1 ;;
             tensorboard) COMPOSE_TENSORBOARD=1 ;;
             gemma) COMPOSE_GEMMA=1 ;;
-            *)
-                echo "Unknown target: '$target'. Valid targets: dev, mlflow, tensorboard, gemma"
-                exit 1
-                ;;
         esac
     done
 fi
@@ -65,7 +75,7 @@ if [ "$COMPOSE_DEV" -eq 1 ]; then
     echo "Building dev image. It will be tagged as '${LOCAL_DEV_IMAGE_NAME_WITH_TAG}' by docker-compose.yml"
     docker compose -f ./docker-compose.yml build \
       --build-arg GIT_COMMIT="${GIT_COMMIT}" \
-      --no-cache dev_env_builder
+      ${NO_CACHE_FLAG} dev_env_builder
 
     echo "Tagging dev image for registry: ${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}"
     docker tag "${LOCAL_DEV_IMAGE_NAME_WITH_TAG}" "${REGISTRY_DEV_IMAGE_NAME_WITH_TAG}"
