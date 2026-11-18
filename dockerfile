@@ -119,7 +119,7 @@ RUN uv python install 3.13.14 && \
 RUN PYTHON_BIN=$(uv python find 3.13.14) && \
     PYTHON_BIN_DIR=$(dirname "$PYTHON_BIN") && \
     # Explicitly bypass the PEP 668 lock since we are configuring the Docker base layer
-    uv pip install --python "$PYTHON_BIN" --break-system-packages pip poetry==2.4.* && \
+    uv pip install --no-cache --python "$PYTHON_BIN" --break-system-packages pip poetry==2.4.* && \
     # Symlink the newly installed tools so they are globally accessible
     ln -s "$PYTHON_BIN_DIR/pip3" /usr/local/bin/pip3 && \
     ln -s "$PYTHON_BIN_DIR/pip" /usr/local/bin/pip && \
@@ -146,77 +146,63 @@ RUN cd /tmp && \
     # apt-get install locally resolves missing lightweight OS dependencies
     apt-get install -y --no-install-recommends ./quarto-${QUARTO_VERSION}-linux-amd64.deb && \
     rm quarto-${QUARTO_VERSION}-linux-amd64.deb && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
     quarto check
 
-# --- Global R Setup ---
-RUN R -e "install.packages('remotes', repos = 'https://cloud.r-project.org/')"
+# --- Global R Bootstrap (remotes + renv only; r_requirements.csv runs after renv::restore) ---
+RUN R -e "install.packages('remotes', repos = 'https://cloud.r-project.org/'); remotes::install_version('renv', version = '1.2.3', repos = 'https://cloud.r-project.org/', upgrade = 'never')"
 
-COPY r_requirements.csv install_R_pkgs.R /tmp/
-RUN cd /tmp && Rscript install_R_pkgs.R && \
-    rm /tmp/r_requirements.csv /tmp/install_R_pkgs.R
-
-ENV RENV_PATHS_CACHE=/opt/renv/cache
-RUN mkdir -p ${RENV_PATHS_CACHE}
-
-# Pre-populate renv cache with all project dependencies from renv.lock
-COPY renv.lock /tmp/renv.lock
-RUN R -e "options(Ncpus = max(1, parallel::detectCores())); renv::restore(lockfile = '/tmp/renv.lock', library = tempdir(), exclude = 'spatial', prompt = FALSE)" && \
-    rm /tmp/renv.lock
-
-# --- Application Setup (as root for installation) ---
-# 1. Dev Tools Setup (radian, ruff, jupyterlab)
-ARG DEV_TOOLS_PROJ_PATH=/workspaces/cuda-py-dev-tools
-WORKDIR $DEV_TOOLS_PROJ_PATH
-
-COPY pyproject.dev-tools.toml ./pyproject.toml
-
-# ---- User setup ----
+# ---- User & Directory Setup (before installing caches/venvs to avoid OverlayFS chown copy-up) ----
 ARG USERNAME=vscode
-# Create the user group and user; -m creates the home directory
-# Do this *before* creating user-owned directories
+ARG DEV_TOOLS_PROJ_PATH=/workspaces/cuda-py-dev-tools
+ARG PROJECT_PATH=/workspaces/PK-Analysis
+ENV RENV_PATHS_CACHE=/opt/renv/cache \
+    HOME=/home/${USERNAME} \
+    R_LIBS_USER=/home/${USERNAME}/R/library
+
 RUN groupadd --gid $USER_GID $USERNAME && \
-    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
+    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME && \
+    mkdir -p ${RENV_PATHS_CACHE} ${POETRY_VIRTUALENVS_PATH} ${DEV_TOOLS_PROJ_PATH} ${PROJECT_PATH} \
+             ${HOME}/R/library ${HOME}/.gemini/antigravity-cli && \
+    chown -R ${USER_UID}:${USER_GID} /opt/renv ${POETRY_VIRTUALENVS_PATH} ${DEV_TOOLS_PROJ_PATH} ${PROJECT_PATH} ${HOME}
 
-# Create necessary directories needed by the user and set ownership *before* switching user
-RUN mkdir -p ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R/library && \
-    chown -R ${USERNAME}:${USER_GID} ${POETRY_VIRTUALENVS_PATH} /home/${USERNAME}/R /home/${USERNAME}/R/library
+# --- Switch to non-root user so renv cache and Poetry venvs are owned by vscode on first write ---
+USER $USERNAME
+ENV PATH="${HOME}/.local/bin:$PATH"
 
-# Install dev tools dependencies using Poetry
+# Pre-populate renv cache BEFORE global r_requirements.csv so all renv.lock packages (including knitr/rmarkdown/jsonlite deps) are cached.
+# Also force-cache recommended packages whose system versions match renv.lock, then remove renv tarball staging cache.
+COPY --chown=${USER_UID}:${USER_GID} renv.lock /tmp/renv.lock
+RUN R -e "options(Ncpus = max(1, parallel::detectCores())); renv::restore(lockfile = '/tmp/renv.lock', library = tempdir(), exclude = 'spatial', prompt = FALSE); renv::install(c('class@7.3-23', 'nnet@7.3-20', 'Matrix@1.7-5'), library = tempdir(), rebuild = TRUE, prompt = FALSE)" && \
+    rm -rf /tmp/renv.lock "${HOME}/.cache/R/renv"
+
+# 1. Dev Tools Setup (radian, ruff, jupyterlab)
+WORKDIR $DEV_TOOLS_PROJ_PATH
+COPY --chown=${USER_UID}:${USER_GID} pyproject.dev-tools.toml ./pyproject.toml
 RUN poetry install --no-interaction --no-ansi --no-root --no-cache
-
-# --- Make tools from the dev tools venv easily accessible ---
-RUN DEV_TOOLS_VENV_PATH=$(poetry env info --path) && \
-    echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" >> /etc/bash.bashrc && \
-    echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" > /etc/profile.d/dev_tools_poetry_env.sh && \
-    chmod +x /etc/profile.d/dev_tools_poetry_env.sh
 
 # 2. Project Dependencies Pre-installation (PK-Analysis / niceode)
-ARG PROJECT_PATH=/workspaces/PK-Analysis
 WORKDIR $PROJECT_PATH
-
-COPY pyproject.toml poetry.lock ./
-# Pre-install all project dependencies into /opt/poetry-venvs/
+COPY --chown=${USER_UID}:${USER_GID} pyproject.toml poetry.lock ./
 RUN poetry install --no-interaction --no-ansi --no-root --no-cache
 
-# Expose project venv to PATH globally so python, pytest, etc. are immediately available
-RUN PROJECT_VENV_PATH=$(poetry env info --path) && \
+# 3. Install Antigravity CLI (agy) into $HOME/.local/bin
+RUN curl -fsSL https://antigravity.google/cli/install.sh | bash
+
+# --- Brief root pass: install global VS Code/Quarto R tools and expose venv PATHs ---
+USER root
+COPY r_requirements.csv install_R_pkgs.R /tmp/
+RUN cd /tmp && Rscript install_R_pkgs.R && \
+    rm -f /tmp/r_requirements.csv /tmp/install_R_pkgs.R && \
+    DEV_TOOLS_VENV_PATH=$(su -s /bin/bash ${USERNAME} -c "POETRY_VIRTUALENVS_PATH=${POETRY_VIRTUALENVS_PATH} poetry -C ${DEV_TOOLS_PROJ_PATH} env info --path") && \
+    PROJECT_VENV_PATH=$(su -s /bin/bash ${USERNAME} -c "POETRY_VIRTUALENVS_PATH=${POETRY_VIRTUALENVS_PATH} poetry -C ${PROJECT_PATH} env info --path") && \
+    echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" >> /etc/bash.bashrc && \
+    echo "export PATH=\"${DEV_TOOLS_VENV_PATH}/bin:\$PATH\"" > /etc/profile.d/dev_tools_poetry_env.sh && \
+    chmod +x /etc/profile.d/dev_tools_poetry_env.sh && \
     echo "export PATH=\"${PROJECT_VENV_PATH}/bin:\$PATH\"" >> /etc/bash.bashrc && \
     echo "export PATH=\"${PROJECT_VENV_PATH}/bin:\$PATH\"" > /etc/profile.d/project_poetry_env.sh && \
     chmod +x /etc/profile.d/project_poetry_env.sh
 
-# Ensure vscode user owns everything in virtualenvs and renv cache for mutability
-RUN chown -R $USERNAME:$USER_GID ${DEV_TOOLS_PROJ_PATH} ${PROJECT_PATH} ${POETRY_VIRTUALENVS_PATH} /opt/renv
-
-# --- Switch context to the non-root user ---
 USER $USERNAME
-
-ARG HOME=/home/$USERNAME
-ENV HOME=$HOME \
-    PATH="$HOME/.local/bin:$PATH" \
-    R_LIBS_USER=$HOME/R/library
-
-# Install Antigravity CLI (agy) into $HOME/.local/bin and pre-create config dir for volume mounts
-RUN curl -fsSL https://antigravity.google/cli/install.sh | bash && \
-    mkdir -p $HOME/.gemini/antigravity-cli
-
 WORKDIR /home/${USERNAME}
