@@ -185,7 +185,7 @@ RUN poetry install --no-interaction --no-ansi --no-root --no-cache
 # 2. Project Dependencies Pre-installation (PK-Analysis / niceode)
 WORKDIR $PROJECT_PATH
 COPY --chown=${USER_UID}:${USER_GID} pyproject.toml poetry.lock ./
-RUN poetry install --no-interaction --no-ansi --no-root --no-cache
+RUN poetry install --with docs --no-interaction --no-ansi --no-root --no-cache
 
 # 3. Install Antigravity CLI (agy) into $HOME/.local/bin
 RUN curl -fsSL https://antigravity.google/cli/install.sh | bash

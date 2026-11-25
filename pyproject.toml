@@ -54,6 +54,20 @@ graphviz = "^0.21"
 tensorflow-cpu = "^2.21.0"
 tabulate = "^0.10.0"
 typing-extensions = "^4.16.0"
+torch = "*"
+transformers = "*"
+peft = "*"
+rdkit = "*"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.5.0"
+mkdocstrings = {extras = ["python"], version = "^0.25.0"}
+griffe = "^1.0.0"
+pymdown-extensions = "^10.8.0"
 
 [build-system]
 requires = ["poetry-core"]
